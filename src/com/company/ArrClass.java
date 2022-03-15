@@ -1,5 +1,8 @@
 package com.company;
 
+import java.util.concurrent.BrokenBarrierException;
+import java.util.concurrent.CyclicBarrier;
+
 public class ArrClass implements Runnable{
     private final int dim;
     private int partNum;
@@ -43,7 +46,7 @@ public class ArrClass implements Runnable{
 
     synchronized public void incPartCount(){
         finishedPartCount++;
-        notify();
+        //notify();
     }
 
     private int currentPartNum = 0;
@@ -66,15 +69,23 @@ public class ArrClass implements Runnable{
         return new Bounds(startIndex, finishIndex, goodBounds);
     }
 
+    private CyclicBarrier cyclicBarrier;
+
     public long threadSum(int threadNum, int partNum){
         this.partNum = partNum;
         partLength = arr.length / partNum;
 
+        cyclicBarrier = new CyclicBarrier(threadNum + 1);
         for (int i = 0; i < threadNum; i++) {
             new Thread(this).start();
         }
 
-        return getSum();
+        try {
+            cyclicBarrier.await();
+        } catch (InterruptedException | BrokenBarrierException e) {
+            e.printStackTrace();
+        }
+        return sum;
     }
 
     @Override
@@ -85,6 +96,11 @@ public class ArrClass implements Runnable{
             collectSum(sum);
             incPartCount();
             bounds = getNextBounds();
+        }
+        try {
+            cyclicBarrier.await();
+        } catch (InterruptedException | BrokenBarrierException e) {
+            e.printStackTrace();
         }
     }
 }
